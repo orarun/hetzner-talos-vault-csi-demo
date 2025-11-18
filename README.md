@@ -1,9 +1,11 @@
 =============================================
+
 Разворачивание через Teraform в облаке Hetzner:
 - Кластера Kubernetes на базе Talos Linux
 - Установки в него Vault
 
 Плюс пример деплоя с использованием секретов через Secrets Store CSI Driver + Vault CSI Provider
+
 =============================================
 
 # Введение
@@ -162,6 +164,7 @@ vault-init.json
 
 ## Драйвер CSI
 Далее. Hetzner Cloud Controller Manager уже установлен модулем Talos, нам остается только установить сам CSI драйвер.
+Добавляем репо hcloud:
 
 ```bash
 helm repo add hcloud https://charts.hetzner.cloud
@@ -179,7 +182,7 @@ kubectl -n kube-system get pods -l app.kubernetes.io/name=hcloud-csi-driver
 kubectl get sc
 ```
 
-Ставим Secrets Store CSI Driver
+Ставим Secrets Store CSI Driver:
 
 ```bash
 helm repo add secrets-store-csi-driver https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
@@ -211,7 +214,7 @@ kubectl label ns vault \
   Warning  FailedCreate  16m                daemonset-controller  Error creating: pods "vault-csi-provider-k5tgp" is forbidden: violates PodSecurity "baseline:latest": hostPath volumes (volume "providervol")
 ```
 
-values для Vault (HA Raft + PVC на Hetzner CSI):
+Values для Vault (HA Raft + PVC на Hetzner CSI).
 
 values-vault.yaml:
 ```bash
@@ -330,10 +333,9 @@ kubectl -n vault exec -ti vault-0 -- vault operator init -key-shares=1 -key-thre
 kubectl -n vault exec -ti vault-0 -- vault operator unseal
 ```
 
-Kubernetes-auth в Vault (для CSI Provider)
+## Kubernetes-auth в Vault (для CSI Provider)
 
-Включим auth/kubernetes, укажем адрес API кластера и CA, создадим политику и роль (привяжем к ServiceAccount нашего приложения):
-
+Включим auth/kubernetes, укажем адрес API кластера и CA, создадим политику и роль (привяжем к ServiceAccount нашего приложения).
 Входим в контейнер сервера и включаем метод аутентификации и конфигурируем соединение с API Kubernetes:
 ```bash
 kubectl -n vault exec -ti vault-0 -c vault -- sh
@@ -454,7 +456,7 @@ spec:
               secretProviderClass: "vault-spc"
 ```
 
-Применяем, проверяем
+Применяем, проверяем:
 
 ```bash
 kubectl apply -f spc-vault.yaml
@@ -468,8 +470,6 @@ kubectl -n default exec -ti deploy/demo -- sh -lc \
 
 На выходе должно быть что-то типа такого:
 ```bash
-$ kubectl -n default exec -ti deploy/demo -- sh -lc \
-  'ls -l /mnt/secrets && echo USER=$(cat /mnt/secrets/app-demo-user) && echo PASS=$(cat /mnt/secrets/app-demo-pass)'
 total 0
 lrwxrwxrwx    1 root     root            20 Nov 13 09:43 app-demo-pass -> ..data/app-demo-pass
 lrwxrwxrwx    1 root     root            20 Nov 13 09:43 app-demo-user -> ..data/app-demo-user
