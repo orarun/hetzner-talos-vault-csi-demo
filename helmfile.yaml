@@ -1,0 +1,48 @@
+helmDefaults:
+  wait: true
+  timeout: 120
+  atomic: true
+
+repositories:
+  - name: hcloud
+    url: https://charts.hetzner.cloud
+
+  - name: secrets-store-csi-driver
+    url: https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts
+
+  - name: hashicorp
+    url: https://helm.releases.hashicorp.com
+
+releases:
+  - name: hcloud-csi
+    namespace: kube-system
+    chart: hcloud/hcloud-csi
+    values:
+      - controller:
+          hcloudToken:
+            existingSecret:
+              name: hcloud
+              key: token
+
+  - name: csi-secrets-store
+    namespace: kube-system
+    chart: secrets-store-csi-driver/secrets-store-csi-driver
+    needs:
+      - kube-system/hcloud-csi
+    set:
+      - name: syncSecret.enabled
+        value: "true"
+      - name: enableSecretRotation
+        value: "true"
+
+  - name: vault
+    namespace: vault
+    chart: hashicorp/vault
+    createNamespace: true
+    wait: false
+    atomic: false
+    needs:
+      - kube-system/csi-secrets-store
+    values:
+      - values-vault.yaml
+

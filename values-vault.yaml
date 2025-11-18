@@ -1,0 +1,19 @@
+server:
+  ha:
+    enabled: true
+    replicas: 1
+    raft:
+      enabled: true
+      setNodeId: true
+  dataStorage:
+    enabled: true
+    storageClass: hcloud-volumes
+    size: 10Gi
+  extraEnvironmentVars:
+    VAULT_DISABLE_MLOCK: "true"
+    VAULT_LOG_LEVEL: "info"
+  service:
+    type: ClusterIP
+csi:
+  enabled: true
+
